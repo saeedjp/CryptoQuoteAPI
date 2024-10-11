@@ -44,43 +44,28 @@
 ```csharp
 //primary constructors
 
-public class CryptoQuoteService (IHttpClientFactory clientFactory,IConfiguration configuration): ICryptoQuoteService  
+public class CryptoQuoteService(IHttpClientFactory clientFactory, IConfiguration configuration) : ICryptoQuoteService
+{
+    public async Task<CryptoQuoteResponse> GetQuoteAsync(string cryptoCode, CancellationToken cancellationToken)
+    {
+        var exchangeRatesApiKey = configuration["ExchangeRatesApiKey"];
+        var coinMarketCapApiKey = configuration["CoinMarketCapApiKey"];
+        if (exchangeRatesApiKey is null && coinMarketCapApiKey is null)
+        {
+            throw new ArgumentNullException($"Failed to retrieve config .");
+        }
 
-{  
+        var usdPrice = await GetUsdPriceAsync(cryptoCode, coinMarketCapApiKey!, cancellationToken);
+        var exchangeRates = await GetExchangeRatesAsync(exchangeRatesApiKey!, cancellationToken);
 
-    public async Task<CryptoQuoteResponse> GetQuoteAsync(string cryptoCode)  
-
-    {      
-
-      var exchangeRatesApiKey = configuration["ExchangeRatesApiKey"];  
-
-        var coinMarketCapApiKey = configuration["CoinMarketCapApiKey"];  
-
-        if (exchangeRatesApiKey is null && coinMarketCapApiKey is null)  
-
-        {            throw new ArgumentNullException($"Failed to retrieve config .");  
-
-        }  
-
-        var usdPrice = await GetUsdPriceAsync(cryptoCode, coinMarketCapApiKey!);  
-
-        var exchangeRates = await GetExchangeRatesAsync(exchangeRatesApiKey!);  
-
-        return new CryptoQuoteResponse(  
-
-            Usd: usdPrice,  
-
-            Eur: usdPrice * exchangeRates["EUR"],  
-
-            Brl: usdPrice * exchangeRates["BRL"],  
-
-            Gbp: usdPrice * exchangeRates["GBP"],  
-
-            Aud: usdPrice * exchangeRates["AUD"]  
-
-        );  
-
-    }
+        return new CryptoQuoteResponse(
+            Usd: usdPrice,
+            Eur: usdPrice * exchangeRates["EUR"],
+            Brl: usdPrice * exchangeRates["BRL"],
+            Gbp: usdPrice * exchangeRates["GBP"],
+            Aud: usdPrice * exchangeRates["AUD"]
+        );
+    }
 
 }
 ```
