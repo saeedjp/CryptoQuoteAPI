@@ -16,13 +16,13 @@ public class CryptoQuoteController : ControllerBase
     }
 
     [HttpGet("{cryptoCode}")]
-    public async Task<IActionResult> GetQuote(string cryptoCode)
+    public async Task<IActionResult> GetQuote(string cryptoCode, CancellationToken cancellationToken)
     {
         try
         {
             var symbol = cryptoCode.Trim().ToUpper();
 
-            var result = await _cryptoQuoteService.GetQuoteAsync(symbol);
+            var result = await _cryptoQuoteService.GetQuoteAsync(symbol, cancellationToken);
             return Ok(result);
         }
         catch (HttpRequestException ex)
@@ -43,4 +43,5 @@ public class CryptoQuoteController : ControllerBase
             return StatusCode(StatusCodes.Status404NotFound, $"{ex.Message}");
         }
     }
+
 }

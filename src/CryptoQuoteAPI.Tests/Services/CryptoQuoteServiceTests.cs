@@ -79,16 +79,21 @@ public class CryptoQuoteServiceTests
 
         var service = new CryptoQuoteService(_httpClientFactory.Object, _configuration.Object);
 
-        // Act
-        var result = await service.GetQuoteAsync("BTC");
+        // Create a CancellationTokenSource
+        using (var cancellationTokenSource = new CancellationTokenSource())
+        {
+            // Act
+            var result = await service.GetQuoteAsync("BTC", cancellationTokenSource.Token);
 
-        // Assert
-        Assert.Equal(50000m, result.Usd);
-        Assert.Equal(42500m, result.Eur);
-        Assert.Equal(262500m, result.Brl);
-        Assert.Equal(37500m, result.Gbp);
-        Assert.Equal(67500m, result.Aud);
+            // Assert
+            Assert.Equal(50000m, result.Usd);
+            Assert.Equal(42500m, result.Eur);
+            Assert.Equal(262500m, result.Brl);
+            Assert.Equal(37500m, result.Gbp);
+            Assert.Equal(67500m, result.Aud);
+        }
     }
+
 
     [Fact]
     public async Task GetUsdPriceAsync_ThrowsHttpRequestException_WhenApiFails()
@@ -106,8 +111,13 @@ public class CryptoQuoteServiceTests
         var service = new CryptoQuoteService(_httpClientFactory.Object, _configuration.Object);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<HttpRequestException>(() => service.GetQuoteAsync("BTC"));
-        Assert.NotNull(exception);
+        using (var cancellationTokenSource = new CancellationTokenSource())
+        {
+            var exception =
+                await Assert.ThrowsAsync<HttpRequestException>(() =>
+                    service.GetQuoteAsync("BTC", cancellationTokenSource.Token));
+            Assert.NotNull(exception);
+        }
     }
 
     [Fact]
@@ -134,7 +144,12 @@ public class CryptoQuoteServiceTests
         var service = new CryptoQuoteService(_httpClientFactory.Object, _configuration.Object);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<KeyNotFoundException>(() => service.GetQuoteAsync("BTC"));
-        Assert.Equal("Price data for BTC not found in the API response.", exception.Message);
+        using (var cancellationTokenSource = new CancellationTokenSource())
+        {
+            var exception =
+                await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+                    service.GetQuoteAsync("BTC", cancellationTokenSource.Token));
+            Assert.Equal("Price data for BTC not found in the API response.", exception.Message);
+        }
     }
 }

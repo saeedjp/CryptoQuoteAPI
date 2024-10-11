@@ -3,12 +3,9 @@ using CryptoQuoteAPI.Models;
 
 namespace CryptoQuoteAPI.Services;
 
-public class CryptoQuoteService (IHttpClientFactory clientFactory,IConfiguration configuration): ICryptoQuoteService
+public class CryptoQuoteService(IHttpClientFactory clientFactory, IConfiguration configuration) : ICryptoQuoteService
 {
-
-
-
-    public async Task<CryptoQuoteResponse> GetQuoteAsync(string cryptoCode)
+    public async Task<CryptoQuoteResponse> GetQuoteAsync(string cryptoCode, CancellationToken cancellationToken)
     {
         var exchangeRatesApiKey = configuration["ExchangeRatesApiKey"];
         var coinMarketCapApiKey = configuration["CoinMarketCapApiKey"];
@@ -17,8 +14,8 @@ public class CryptoQuoteService (IHttpClientFactory clientFactory,IConfiguration
             throw new ArgumentNullException($"Failed to retrieve config .");
         }
 
-        var usdPrice = await GetUsdPriceAsync(cryptoCode, coinMarketCapApiKey!);
-        var exchangeRates = await GetExchangeRatesAsync(exchangeRatesApiKey!);
+        var usdPrice = await GetUsdPriceAsync(cryptoCode, coinMarketCapApiKey!, cancellationToken);
+        var exchangeRates = await GetExchangeRatesAsync(exchangeRatesApiKey!, cancellationToken);
 
         return new CryptoQuoteResponse(
             Usd: usdPrice,
@@ -29,13 +26,14 @@ public class CryptoQuoteService (IHttpClientFactory clientFactory,IConfiguration
         );
     }
 
-    private async Task<decimal> GetUsdPriceAsync(string cryptoCode, string apiKey)
+    private async Task<decimal> GetUsdPriceAsync(string cryptoCode, string apiKey, CancellationToken cancellationToken)
     {
         var client = clientFactory.CreateClient();
         client.DefaultRequestHeaders.Add("X-CMC_PRO_API_KEY", apiKey);
         var response =
             await client.GetAsync(
-                $"https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol={cryptoCode.ToUpper()}");
+                $"https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol={cryptoCode.ToUpper()}",
+                cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -44,7 +42,7 @@ public class CryptoQuoteService (IHttpClientFactory clientFactory,IConfiguration
             throw new HttpRequestException();
         }
 
-        var content = await response.Content.ReadAsStringAsync();
+        var content = await response.Content.ReadAsStringAsync(cancellationToken);
 
         try
         {
@@ -74,19 +72,21 @@ public class CryptoQuoteService (IHttpClientFactory clientFactory,IConfiguration
     }
 
 
-    private async Task<Dictionary<string, decimal>> GetExchangeRatesAsync(string apiKey)
+    private async Task<Dictionary<string, decimal>> GetExchangeRatesAsync(string apiKey,
+        CancellationToken cancellationToken)
     {
         var client = clientFactory.CreateClient();
         var response =
             await client.GetAsync(
-                $"https://api.exchangeratesapi.io/v1/latest?access_key={apiKey}&symbols=EUR,BRL,GBP,AUD");
+                $"https://api.exchangeratesapi.io/v1/latest?access_key={apiKey}&symbols=EUR,BRL,GBP,AUD",
+                cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
             throw new KeyNotFoundException($"Failed to fetch exchange rates. Status code: {response.StatusCode}");
         }
 
-        var content = await response.Content.ReadAsStringAsync();
+        var content = await response.Content.ReadAsStringAsync(cancellationToken);
 
         try
         {
